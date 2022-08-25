@@ -10,7 +10,7 @@ import (
 )
 
 type AccessToken interface {
-	CheckToken() error
+	Token() (string, error)
 }
 
 type accessToken struct {
@@ -19,16 +19,29 @@ type accessToken struct {
 	expiration int64
 }
 
+func (at *accessToken) Token() (string, error) {
+	if time.Now().Unix() < at.expiration {
+		return at.token, nil
+	}
+	err := at.setToken()
+	return at.token, err
+}
+
+var _ AccessToken = (*accessToken)(nil)
+
 func NewAccessToken(app *application) (AccessToken, error) {
 	log.Debug("NewAccessToken app:", *app)
 	token := &accessToken{app: app}
-	return token, token.CheckToken()
+	return token, token.setToken()
 }
 
-func (at accessToken) CheckToken() error {
+func (at *accessToken) setToken() error {
 	resp, err := httpclient.Get(fmt.Sprintf(constant.URLGetToken, at.app.companyId, at.app.secret))
 	if err != nil {
 		return errors.Wrap(err, "httpclient.Get")
+	}
+	if err = IsError(resp); err != nil {
+		return err
 	}
 	at.token, err = resp.GetString(constant.KeyAccessToken)
 	if err != nil {
