@@ -9,6 +9,8 @@ type Config struct {
 	CompanyId string
 	Secret    string
 	AgentId   int
+
+	Location string
 }
 
 func NewConfig() *Config {
@@ -21,5 +23,7 @@ func NewConfig() *Config {
 		CompanyId: os.Getenv("COMPANY_ID"),
 		Secret:    os.Getenv("SECRET"),
 		AgentId:   agentId,
+
+		Location: os.Getenv("LOCATION"),
 	}
 }

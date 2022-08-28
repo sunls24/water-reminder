@@ -30,7 +30,7 @@ func (at *accessToken) Token() (string, error) {
 var _ AccessToken = (*accessToken)(nil)
 
 func NewAccessToken(app *application) (AccessToken, error) {
-	log.Debug("NewAccessToken app:", *app)
+	log.Debugf("NewAccessToken app: %+v", app)
 	token := &accessToken{app: app}
 	return token, token.setToken()
 }

@@ -27,7 +27,7 @@ func (app *application) SendMessage(msg *Message) error {
 	}
 	msg.AgentId = app.agentId
 
-	log.Debugf("SendMessage: type: %s, content: %s, token: %s", msg.Type, msg.Content(), token)
+	log.Debugf("SendMessage: %+v, token: %s", msg, token)
 	resp, err := httpclient.Post(fmt.Sprintf(constant.URLSendMessage, token), msg)
 	if err != nil {
 		return errors.Wrap(err, "httpclient.Post")
