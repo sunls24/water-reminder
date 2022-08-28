@@ -19,7 +19,7 @@ func Run(cfg *config.Config) {
 		log.Fatal(errors.Wrapf(err, "LoadLocation %s", cfg.Location))
 	}
 
-	schedule, err := NewSchedule("09:00-18:00", "11:30-13:00", time.Hour, 800, local, app)
+	schedule, err := NewSchedule("09:00-18:00", "11:30-13:00", time.Hour*2, 3000, local, app)
 	if err != nil {
 		log.Fatal(err)
 	}

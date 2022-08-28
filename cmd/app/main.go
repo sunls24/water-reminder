@@ -2,6 +2,8 @@ package main
 
 import (
 	log "github.com/sirupsen/logrus"
+	"math/rand"
+	"time"
 	"water-reminder/config"
 	"water-reminder/internal/app"
 )
@@ -12,6 +14,9 @@ func init() {
 	format.FullTimestamp = true
 	format.TimestampFormat = "06-01-02 15:04:05"
 	log.SetFormatter(format)
+
+	// 设置随机种子
+	rand.Seed(time.Now().UnixNano())
 }
 
 func main() {

@@ -32,29 +32,60 @@ type ScheduleTarget struct {
 
 	// 已提醒提醒次数
 	times int
+
+	lastRemind map[int]bool
+}
+
+func fmtML(ml int) string {
+	if ml < 1000 {
+		return fmt.Sprintf("%dml", ml)
+	}
+	return fmt.Sprintf("%.1fL", float64(ml)/1000)
 }
 
 func (st *ScheduleTarget) reset() {
-	st.each = 100
+	st.each = 600
 	st.current = 0
 	st.times = 0
+	st.lastRemind = map[int]bool{}
 }
 
 func (st *ScheduleTarget) message() string {
 	switch st.times {
 	case 1:
 		var powerList = []string{
-			"工作再忙也不要忘记喝水哦，听到没！",
-			"坚持就是胜利💪，请收下这碗鸡汤 😜",
+			"工作再忙也不要忘记喝水呐，听到没！",
+			"坚持就是胜利💪，请收下这碗鸡汤😜",
+			"PS 今天也是想念我宝贝的一天哦😘",
+			"本提醒是您专属的哦，独一份！👏",
+			"再忍一忍，周末马上就到了 😄",
+			"我只是个无情的机器人，给我喝水👊",
+			"人工智能的时代何时到来，这样我就可以下班啦😌",
+			"这才是v0.1版本哦，一整个期待住了🤩",
 		}
 		power := powerList[rand.Int()%len(powerList)]
-		return fmt.Sprintf(`今天是 %s, 憨憨来提醒你喝水啦！
-今日喝水目标：%dml
-每次需要喝 %dml
-%s`, time.Now().Format("06-01-02"), st.Target, st.each, power)
+		return fmt.Sprintf(`今天是 %s ☀️, 憨憨来提醒你喝水啦！
+今日喝水目标：%s
+每次需要喝 %s 哦
+%s`, time.Now().Format("06-01-02"), fmtML(st.Target), fmtML(st.each), power)
 	default:
-		return fmt.Sprintf(`叮咚，该喝水啦～
-今日喝水目标已完成 (%.0f%%) %dml/%dml`, float64(st.current)/float64(st.Target)*100, st.current, st.Target)
+		return fmt.Sprintf(`叮咚，该喝水💦啦～
+这是今天第 %d 次了昂
+今日喝水目标 (%.0f%%) %s/%s🎯`, st.times, float64(st.current)/float64(st.Target)*100, fmtML(st.current), fmtML(st.Target))
+	}
+}
+
+func (st *ScheduleTarget) remind(times int) string {
+	switch times {
+	case 0:
+		return fmt.Sprintf(`我来啦，刚才提醒你喝水，喝够了没！
+当前喝水目标 %s/%s🎯
+喝够回复1️⃣，不够快给我喝去！`, fmtML(st.current), fmtML(st.Target))
+	case 1:
+		return fmt.Sprintf(`我又来啦，别嫌我烦，刚才给你说的目标喝够了没？
+当前喝水目标 %s/%s🎯`, fmtML(st.current), fmtML(st.Target))
+	default:
+		return "什么也没有，可能系统出错了！"
 	}
 }
 
@@ -127,8 +158,6 @@ func (s *Schedule) delay() time.Duration {
 	nowTime := time.Now().In(s.location)
 	log.Infof("Schedule.delay now time: %v", nowTime)
 
-	nowTime = time.Date(nowTime.Year(), nowTime.Month(), nowTime.Day(), 0, 0, 0, 0, nowTime.Location())
-
 	startTime, endTime := s.oneDay.toTime(nowTime)
 	log.Infof("Schedule.delay day start: %v", startTime)
 	log.Infof("Schedule.delay day end: %v", endTime)
@@ -174,12 +203,8 @@ func (s *Schedule) delay() time.Duration {
 	return oneDay - passed
 }
 
-var test int
-
 func (s *Schedule) schedule(duration time.Duration) {
-	log.Infof("Schdule.schedule %v", duration)
-	duration = time.Second * time.Duration(test)
-	test++
+	log.Infof("Schedule.schedule %v", duration)
 	time.AfterFunc(duration, func() {
 		if s.target.current >= s.target.Target {
 			return
@@ -188,6 +213,34 @@ func (s *Schedule) schedule(duration time.Duration) {
 		s.target.current += s.target.each
 		if err := s.app.SendMessage(wechatwork.NewTextMessage(s.target.message())); err != nil {
 			log.Errorf("SendMessage %v", err)
+		}
+	})
+
+	// 两次额外提醒，提示喝水量需达标
+	// 1/4时提醒一次
+	log.Info("Schedule.schedule remind0: ", duration+s.interval/4)
+	time.AfterFunc(duration+s.interval/4, func() {
+		if s.target.lastRemind[0] {
+			return
+		}
+		if err := s.app.SendMessage(wechatwork.NewTextMessage(s.target.remind(0))); err != nil {
+			log.Errorf("SendMessage %v", err)
+		}
+		if s.target.current >= s.target.Target {
+			s.target.lastRemind[0] = true
+		}
+	})
+	// 3/5时提醒一次
+	log.Info("Schedule.schedule remind1: ", duration+s.interval*3/5)
+	time.AfterFunc(duration+s.interval*3/4, func() {
+		if s.target.lastRemind[1] {
+			return
+		}
+		if err := s.app.SendMessage(wechatwork.NewTextMessage(s.target.remind(1))); err != nil {
+			log.Errorf("SendMessage %v", err)
+		}
+		if s.target.current >= s.target.Target {
+			s.target.lastRemind[1] = true
 		}
 	})
 }
